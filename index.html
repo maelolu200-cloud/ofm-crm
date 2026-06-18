@@ -414,19 +414,7 @@
         <button class="btn btn-primary" onclick="syncFromSheet()">↻ Synchroniser maintenant</button>
         <button class="btn" onclick="testConnection()">Tester la connexion</button>
       </div>
-      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div class="config-field" style="max-width:200px">
-          <label>Sync automatique toutes les</label>
-          <select id="cfg-interval" onchange="saveConfig()">
-            <option value="0">Désactivée</option>
-            <option value="0.5" selected>30 secondes</option>
-            <option value="1">1 minute</option>
-            <option value="2">2 minutes</option>
-            <option value="5">5 minutes</option>
-            <option value="10">10 minutes</option>
-          </select>
-        </div>
-      </div>
+
     </div>
 
     <div class="config-panel">
@@ -541,7 +529,6 @@ function saveConfig() {
   config.sheetId = document.getElementById('cfg-sheet-id').value.trim();
   config.apiKey = document.getElementById('cfg-api-key').value.trim();
   config.sheetName = document.getElementById('cfg-sheet-name').value.trim() || 'Feuille1';
-  config.interval = parseInt(document.getElementById('cfg-interval').value) || 5;
   localStorage.setItem('ofm_config', JSON.stringify(config));
   updateSyncBar();
   if (config.autoSync) { stopAutoSync(); startAutoSync(); }
@@ -550,7 +537,6 @@ function loadConfig() {
   document.getElementById('cfg-sheet-id').value = config.sheetId || '';
   document.getElementById('cfg-api-key').value = config.apiKey || '';
   document.getElementById('cfg-sheet-name').value = config.sheetName || 'Feuille1';
-  document.getElementById('cfg-interval').value = config.interval || 0.5;
 }
 
 // ─── Sync bar ─────────────────────────────────────────────────────
@@ -988,13 +974,13 @@ function updateAutoSyncUI() {
   const btn = document.getElementById('autosync-btn');
   if (!badge || !btn) return;
   if (config.autoSync) {
-    badge.textContent = `Auto-sync ${config.interval}min`;
+    badge.textContent = 'Auto-sync ✓';
     badge.className = 'autosync-badge';
     btn.textContent = '⏹ Désactiver';
   } else {
     badge.textContent = 'Auto-sync off';
     badge.className = 'autosync-badge off';
-    btn.textContent = '▶ Activer auto-sync';
+    btn.textContent = '▶ Auto-sync';
   }
 }
 
