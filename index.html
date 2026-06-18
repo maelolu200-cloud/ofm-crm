@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OFM Outreach CRM</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236d4fc2'/%3E%3Ctext x='50%25' y='13' dominant-baseline='middle' text-anchor='middle' font-family='Inter,Arial,sans-serif' font-size='7' font-weight='700' fill='white' letter-spacing='0.5'%3EOFM%3C/text%3E%3Cpath d='M9 18 Q16 14 23 18 Q16 26 9 18Z' fill='white' opacity='0.9'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -284,6 +285,18 @@
 
     .ig-link { color: var(--purple); text-decoration: none; font-size: 12px; }
     .ig-link:hover { text-decoration: underline; }
+
+    /* Drag & drop */
+    .card { cursor: grab; }
+    .card.dragging { opacity: .35; cursor: grabbing; transform: rotate(2deg) scale(1.02); border-color: var(--purple-mid); }
+    .kanban-col { min-height: 80px; transition: background .15s; }
+    .kanban-col.drag-over { background: var(--purple-dim); border-radius: var(--radius); outline: 2px dashed var(--purple-mid); }
+    .drop-placeholder { height: 56px; border: 2px dashed var(--purple-mid); border-radius: var(--radius); margin-bottom: 8px; background: rgba(109,79,194,.1); }
+
+    /* Auto-sync */
+    .autosync-wrap { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .autosync-badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:500; background:var(--green-dim); color:var(--green); border:1px solid #1a4a2a; }
+    .autosync-badge.off { background:var(--bg3); color:var(--text3); border-color:var(--border); }
   </style>
 </head>
 <body>
@@ -320,8 +333,12 @@
   <div class="sync-bar" id="sync-bar">
     <div class="sync-dot" id="sync-dot"></div>
     <span class="sync-text" id="sync-text">Google Sheets non configuré — voir Paramètres</span>
-    <button class="btn btn-sm" onclick="syncFromSheet()" id="sync-btn">↻ Sync</button>
-    <a id="sheet-link" href="#" target="_blank" class="sync-link" style="display:none">Ouvrir le Sheet ↗</a>
+    <div class="autosync-wrap">
+      <span class="autosync-badge off" id="autosync-badge">Auto-sync off</span>
+      <button class="btn btn-sm" onclick="toggleAutoSync()" id="autosync-btn">▶ Activer auto-sync</button>
+      <button class="btn btn-sm" onclick="syncFromSheet()" id="sync-btn">↻ Sync</button>
+      <a id="sheet-link" href="#" target="_blank" class="sync-link" style="display:none">Ouvrir le Sheet ↗</a>
+    </div>
   </div>
 
   <!-- KANBAN VIEW -->
@@ -396,6 +413,19 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="syncFromSheet()">↻ Synchroniser maintenant</button>
         <button class="btn" onclick="testConnection()">Tester la connexion</button>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="config-field" style="max-width:200px">
+          <label>Sync automatique toutes les</label>
+          <select id="cfg-interval" onchange="saveConfig()">
+            <option value="0">Désactivée</option>
+            <option value="1">1 minute</option>
+            <option value="2">2 minutes</option>
+            <option value="5" selected>5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="30">30 minutes</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -473,7 +503,7 @@ const PLATFORM_LABEL = { instagram:'Instagram', tiktok:'TikTok', twitter:'Twitte
 
 let models = [];
 let nextId = 1;
-let config = { sheetId:'', apiKey:'', sheetName:'Feuille1' };
+let config = { sheetId:'', apiKey:'', sheetName:'Feuille1', interval:5, autoSync:false };
 
 // ─── Init ─────────────────────────────────────────────────────────
 function init() {
@@ -497,6 +527,13 @@ function init() {
   loadConfig();
   renderAll();
   updateSyncBar();
+  // Auto-sync activée automatiquement si le sheet est configuré
+  if (config.sheetId && config.apiKey) {
+    config.autoSync = true;
+    syncFromSheet(); // sync immédiate dès l'ouverture
+    startAutoSync(); // puis toutes les X minutes
+  }
+  updateAutoSyncUI();
 }
 
 function save() { localStorage.setItem('ofm_models', JSON.stringify(models)); }
@@ -504,13 +541,16 @@ function saveConfig() {
   config.sheetId = document.getElementById('cfg-sheet-id').value.trim();
   config.apiKey = document.getElementById('cfg-api-key').value.trim();
   config.sheetName = document.getElementById('cfg-sheet-name').value.trim() || 'Feuille1';
+  config.interval = parseInt(document.getElementById('cfg-interval').value) || 5;
   localStorage.setItem('ofm_config', JSON.stringify(config));
   updateSyncBar();
+  if (config.autoSync) { stopAutoSync(); startAutoSync(); }
 }
 function loadConfig() {
   document.getElementById('cfg-sheet-id').value = config.sheetId || '';
   document.getElementById('cfg-api-key').value = config.apiKey || '';
   document.getElementById('cfg-sheet-name').value = config.sheetName || 'Feuille1';
+  document.getElementById('cfg-interval').value = config.interval || 5;
 }
 
 // ─── Sync bar ─────────────────────────────────────────────────────
@@ -535,14 +575,36 @@ function updateSyncBar(state, msg) {
   else { dot.classList.add('ok'); txt.textContent = 'Sheet configuré — prêt à synchroniser'; }
 }
 
+// ─── Correspondance mots-clés → statut ───────────────────────────
+function parseStatus(raw) {
+  const s = (raw || '').toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/^(contact|contacte|contactee|nouveau|new|envoy|envoye|dm\s?envoy|message\s?envoy|done)/.test(s)) return 'contactee';
+  if (/^(interest|interesse|interessee|curieux|curieuse|repond|repondu|repons|vu|lu|oui|positif|positive|chaud|chaude)/.test(s)) return 'interesse';
+  if (/^(discussion|en\s?discussion|negocia|negoci|appel|call|rendez|rdv|echange|parle|parler|en\s?cours|en\s?contact)/.test(s)) return 'discussion';
+  if (/^(signe|signee|sign|accord|ok|valide|validee|contrat|agree|done|accepte|acceptee|gagne|gagnee|close|closed|won)/.test(s)) return 'signee';
+  if (/^(refus|refusee|refuse|non|no|pas\s?interest|pas\s?interessee|negatif|negative|ko|perdu|perdue|lost|froid|froide|abandon)/.test(s)) return 'refusee';
+  return 'contactee';
+}
+
 // ─── Google Sheets sync ───────────────────────────────────────────
+// On garde une map des statuts modifiés manuellement dans le CRM
+// clé = handle normalisé, valeur = statut choisi manuellement
+let manualOverrides = JSON.parse(localStorage.getItem('ofm_overrides') || '{}');
+
+function setManualOverride(handle, status) {
+  manualOverrides[handle.toLowerCase().trim()] = status;
+  localStorage.setItem('ofm_overrides', JSON.stringify(manualOverrides));
+}
+
 async function syncFromSheet() {
   if (!config.sheetId || !config.apiKey) {
     showView('settings');
     toast('Configure d\'abord le Sheet dans Paramètres', 'error');
     return;
   }
-  updateSyncBar('loading', 'Synchronisation en cours…');
+  updateSyncBar('loading', 'Sync…');
+  const t0 = Date.now();
   try {
     const range = encodeURIComponent(`${config.sheetName}!A2:I1000`);
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${range}?key=${config.apiKey}`;
@@ -550,28 +612,53 @@ async function syncFromSheet() {
     if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
     const data = await res.json();
     const rows = data.values || [];
-    if (rows.length === 0) { updateSyncBar('ok', 'Sheet vide — aucune donnée importée'); return; }
-    const imported = rows.map((r, i) => ({
-      id: nextId + i,
+    if (rows.length === 0) { updateSyncBar('ok', 'Sheet vide'); return; }
+
+    const incoming = rows.map(r => ({
       name: r[0] || '',
-      handle: r[1] || '',
+      handle: (r[1] || '').toLowerCase().trim(),
       platform: (r[2] || 'instagram').toLowerCase(),
       followers: r[3] || '',
       niche: r[4] || '',
       method: r[5] || 'DM Instagram',
-      status: r[6] || 'contactee',
+      statusFromSheet: parseStatus(r[6]),
       date: r[7] || new Date().toISOString().split('T')[0],
       note: r[8] || ''
-    })).filter(m => m.name);
-    models = imported;
+    })).filter(r => r.name);
+
+    // Fusion intelligente : on garde les modèles existantes, on met à jour les données
+    // mais on respecte les overrides manuels (drag & drop)
+    const existingByHandle = {};
+    models.forEach(m => { existingByHandle[m.handle.toLowerCase().trim()] = m; });
+
+    const merged = incoming.map((r, i) => {
+      const existing = existingByHandle[r.handle];
+      const manualStatus = manualOverrides[r.handle];
+      return {
+        id: existing ? existing.id : (nextId++),
+        name: r.name,
+        handle: r.handle,
+        platform: r.platform,
+        followers: r.followers,
+        niche: r.niche,
+        method: r.method,
+        // Priorité : override manuel > statut Sheet
+        status: manualStatus || r.statusFromSheet,
+        date: r.date,
+        note: r.note
+      };
+    });
+
+    models = merged;
     nextId = models.length ? Math.max(...models.map(m => m.id)) + 1 : 1;
     save();
     renderAll();
-    updateSyncBar('ok', `${imported.length} modèles importées depuis Google Sheets`);
-    toast(`✓ ${imported.length} modèles synchronisées`, 'success');
+    const ms = Date.now() - t0;
+    updateSyncBar('ok', `✓ ${merged.length} modèles — ${ms}ms`);
+    toast(`✓ Sync en ${ms}ms`, 'success');
   } catch(e) {
     updateSyncBar('error', 'Erreur : ' + e.message);
-    toast('Erreur de sync : ' + e.message, 'error');
+    toast('Erreur : ' + e.message, 'error');
   }
 }
 
@@ -629,14 +716,12 @@ function renderKanban() {
   const filtered = getFiltered();
   document.getElementById('kanban').innerHTML = STATUSES.map(s => {
     const cards = filtered.filter(m => m.status === s.id);
-    return `<div class="col-${s.id}">
+    return `<div class="col-${s.id} kanban-col" data-status="${s.id}">
       <div class="col-head">${s.label}<span class="col-badge">${cards.length}</span></div>
       ${cards.length ? cards.map(cardHTML).join('') : '<div class="empty-col">Aucune modèle</div>'}
     </div>`;
   }).join('');
-  document.querySelectorAll('.card').forEach(el => {
-    el.addEventListener('click', () => openEdit(+el.dataset.id));
-  });
+  initDragDrop();
 }
 
 function cardHTML(m) {
@@ -644,7 +729,7 @@ function cardHTML(m) {
   const igUrl = m.platform === 'instagram' ? `https://instagram.com/${handle}` :
                 m.platform === 'tiktok' ? `https://tiktok.com/@${handle}` :
                 m.platform === 'twitter' ? `https://twitter.com/${handle}` : '#';
-  return `<div class="card" data-id="${m.id}">
+  return `<div class="card" draggable="true" data-id="${m.id}">
     <div class="card-name">${m.name}</div>
     <div class="card-handle">
       <a class="ig-link" href="${igUrl}" target="_blank" onclick="event.stopPropagation()">${m.handle} ↗</a>
@@ -730,7 +815,10 @@ function saveModel() {
   };
   if (id) {
     const idx = models.findIndex(x => x.id === +id);
-    if (idx > -1) { models[idx] = { ...models[idx], ...obj }; }
+    if (idx > -1) {
+      models[idx] = { ...models[idx], ...obj };
+      setManualOverride(obj.handle, obj.status);
+    }
   } else {
     models.push({ id: nextId++, ...obj });
   }
@@ -791,6 +879,126 @@ function toast(msg, type = '') {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
+
+// ─── Drag & Drop ─────────────────────────────────────────────────
+let dragId = null;
+
+function initDragDrop() {
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragId = +card.dataset.id;
+      setTimeout(() => card.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+      document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+      dragId = null;
+    });
+    card.addEventListener('click', () => { if (!dragId) openEdit(+card.dataset.id); });
+  });
+
+  document.querySelectorAll('.kanban-col').forEach(col => {
+    col.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drag-over');
+      const existing = col.querySelector('.drop-placeholder');
+      if (!existing) {
+        const ph = document.createElement('div');
+        ph.className = 'drop-placeholder';
+        col.appendChild(ph);
+      }
+    });
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) {
+        col.classList.remove('drag-over');
+        col.querySelector('.drop-placeholder')?.remove();
+      }
+    });
+    col.addEventListener('drop', e => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      col.querySelector('.drop-placeholder')?.remove();
+      if (!dragId) return;
+      const newStatus = col.dataset.status;
+      const m = models.find(x => x.id === dragId);
+      if (m && m.status !== newStatus) {
+        m.status = newStatus;
+        setManualOverride(m.handle, newStatus);
+        save();
+        renderAll();
+        const label = STATUSES.find(s => s.id === newStatus)?.label || newStatus;
+        toast(`✓ ${m.name} → ${label}`, 'success');
+      }
+    });
+  });
+}
+
+// ─── Auto-sync ────────────────────────────────────────────────────
+let autoSyncTimer = null;
+let countdownTimer = null;
+let nextSyncIn = 0;
+
+function toggleAutoSync() {
+  if (config.autoSync) {
+    config.autoSync = false;
+    stopAutoSync();
+    toast('Auto-sync désactivée', '');
+  } else {
+    if (!config.sheetId || !config.apiKey) {
+      showView('settings');
+      toast('Configure d\'abord le Sheet dans Paramètres', 'error');
+      return;
+    }
+    config.autoSync = true;
+    startAutoSync();
+    toast('Auto-sync activée ✓', 'success');
+  }
+  localStorage.setItem('ofm_config', JSON.stringify(config));
+  updateAutoSyncUI();
+}
+
+function startAutoSync() {
+  const mins = config.interval || 5;
+  nextSyncIn = mins * 60;
+  updateAutoSyncUI();
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    nextSyncIn--;
+    if (nextSyncIn <= 0) {
+      syncFromSheet();
+      nextSyncIn = mins * 60;
+    }
+  }, 1000);
+}
+
+function stopAutoSync() {
+  clearInterval(autoSyncTimer);
+  clearInterval(countdownTimer);
+  autoSyncTimer = null;
+  countdownTimer = null;
+  nextSyncIn = 0;
+  updateAutoSyncUI();
+}
+
+function updateAutoSyncUI() {
+  const badge = document.getElementById('autosync-badge');
+  const btn = document.getElementById('autosync-btn');
+  if (!badge || !btn) return;
+  if (config.autoSync) {
+    badge.textContent = `Auto-sync ${config.interval}min`;
+    badge.className = 'autosync-badge';
+    btn.textContent = '⏹ Désactiver';
+  } else {
+    badge.textContent = 'Auto-sync off';
+    badge.className = 'autosync-badge off';
+    btn.textContent = '▶ Activer auto-sync';
+  }
+}
+
+
 
 init();
 </script>
