@@ -419,11 +419,11 @@
           <label>Sync automatique toutes les</label>
           <select id="cfg-interval" onchange="saveConfig()">
             <option value="0">Désactivée</option>
+            <option value="0.5" selected>30 secondes</option>
             <option value="1">1 minute</option>
             <option value="2">2 minutes</option>
-            <option value="5" selected>5 minutes</option>
+            <option value="5">5 minutes</option>
             <option value="10">10 minutes</option>
-            <option value="30">30 minutes</option>
           </select>
         </div>
       </div>
@@ -503,7 +503,7 @@ const PLATFORM_LABEL = { instagram:'Instagram', tiktok:'TikTok', twitter:'Twitte
 
 let models = [];
 let nextId = 1;
-let config = { sheetId:'', apiKey:'', sheetName:'Feuille1', interval:5, autoSync:false };
+let config = { sheetId:'', apiKey:'', sheetName:'Feuille1', interval:0.5, autoSync:false };
 
 // ─── Init ─────────────────────────────────────────────────────────
 function init() {
@@ -550,7 +550,7 @@ function loadConfig() {
   document.getElementById('cfg-sheet-id').value = config.sheetId || '';
   document.getElementById('cfg-api-key').value = config.apiKey || '';
   document.getElementById('cfg-sheet-name').value = config.sheetName || 'Feuille1';
-  document.getElementById('cfg-interval').value = config.interval || 5;
+  document.getElementById('cfg-interval').value = config.interval || 0.5;
 }
 
 // ─── Sync bar ─────────────────────────────────────────────────────
