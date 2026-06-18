@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OFM Outreach CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f11;
+      --bg2: #18181c;
+      --bg3: #202026;
+      --border: #2a2a32;
+      --border2: #3a3a45;
+      --text: #f0f0f4;
+      --text2: #9090a0;
+      --text3: #5a5a6a;
+      --purple: #a78bfa;
+      --purple-dim: #2d2450;
+      --purple-mid: #6d4fc2;
+      --green: #4ade80;
+      --green-dim: #14291e;
+      --amber: #fbbf24;
+      --amber-dim: #2a2010;
+      --blue: #60a5fa;
+      --blue-dim: #0f1e35;
+      --red: #f87171;
+      --red-dim: #2a1010;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* Layout */
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: 220px; background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 1.25rem 0; z-index: 50;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    .logo-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--purple-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .logo-text { font-size: 15px; font-weight: 600; color: var(--text); }
+    .logo-sub { font-size: 11px; color: var(--text3); }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 1.25rem; cursor: pointer;
+      color: var(--text2); font-size: 13px; font-weight: 500;
+      border-radius: 0; transition: all .15s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: var(--bg3); color: var(--text); }
+    .nav-item.active { background: var(--purple-dim); color: var(--purple); }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .main { margin-left: 220px; padding: 2rem; min-height: 100vh; }
+
+    /* Top bar */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.75rem; gap: 12px; flex-wrap: wrap;
+    }
+    .page-title { font-size: 20px; font-weight: 600; }
+    .topbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .search-wrap { position: relative; }
+    .search-wrap input {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      padding: 7px 10px 7px 32px; font-size: 13px; width: 200px;
+      font-family: inherit; outline: none; transition: border-color .15s;
+    }
+    .search-wrap input:focus { border-color: var(--purple-mid); }
+    .search-wrap .s-icon {
+      position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+      color: var(--text3); font-size: 14px; pointer-events: none;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      cursor: pointer; border: 1px solid var(--border2);
+      background: var(--bg2); color: var(--text);
+      transition: all .15s; white-space: nowrap;
+    }
+    .btn:hover { background: var(--bg3); border-color: var(--border2); }
+    .btn-primary {
+      background: var(--purple-mid); border-color: var(--purple-mid); color: #fff;
+    }
+    .btn-primary:hover { background: #7c5cd4; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-ghost { background: none; border: none; color: var(--text2); padding: 5px 8px; }
+    .btn-ghost:hover { color: var(--text); background: var(--bg3); }
+    .btn-danger { background: var(--red-dim); border-color: #5a2020; color: var(--red); }
+    .btn-danger:hover { background: #3a1515; }
+
+    /* Sync bar */
+    .sync-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px;
+      margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+    .sync-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .sync-dot.loading { background: var(--amber); animation: pulse 1s infinite; }
+    .sync-dot.error { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .sync-text { font-size: 12px; color: var(--text2); flex: 1; }
+    .sync-link { font-size: 12px; color: var(--purple); text-decoration: none; }
+    .sync-link:hover { text-decoration: underline; }
+
+    /* Config panel */
+    .config-panel {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .config-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+    .config-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+    .config-field { flex: 1; min-width: 200px; }
+    .config-field label { font-size: 11px; color: var(--text3); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+    .config-field input, .config-field select {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); padding: 7px 10px;
+      font-size: 13px; font-family: inherit; outline: none;
+    }
+    .config-field input:focus, .config-field select:focus { border-color: var(--purple-mid); }
+    .config-note { font-size: 12px; color: var(--text3); line-height: 1.6; }
+    .config-note a { color: var(--purple); }
+    .config-note code { background: var(--bg3); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
+    /* Stats */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px; margin-bottom: 1.75rem;
+    }
+    .stat-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+    }
+    .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .stat-val { font-size: 26px; font-weight: 600; }
+    .stat-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .stat-purple .stat-val { color: var(--purple); }
+    .stat-green .stat-val { color: var(--green); }
+    .stat-amber .stat-val { color: var(--amber); }
+    .stat-blue .stat-val { color: var(--blue); }
+
+    /* Kanban */
+    .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; align-items: start; }
+    @media (max-width: 1100px) { .kanban { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 750px) { .kanban { grid-template-columns: 1fr 1fr; } .main { margin-left: 0; padding: 1rem; } .sidebar { display: none; } }
+
+    .col-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 10px; border-radius: var(--radius-sm);
+      margin-bottom: 10px; font-size: 12px; font-weight: 600;
+    }
+    .col-badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+
+    .col-contactee .col-head { background: var(--blue-dim); color: var(--blue); }
+    .col-contactee .col-badge { background: #0f1e35; color: var(--blue); }
+    .col-interesse .col-head { background: var(--amber-dim); color: var(--amber); }
+    .col-interesse .col-badge { background: #1e1800; color: var(--amber); }
+    .col-discussion .col-head { background: var(--purple-dim); color: var(--purple); }
+    .col-discussion .col-badge { background: #1a1030; color: var(--purple); }
+    .col-signee .col-head { background: var(--green-dim); color: var(--green); }
+    .col-signee .col-badge { background: #0a1a10; color: var(--green); }
+    .col-refusee .col-head { background: var(--red-dim); color: var(--red); }
+    .col-refusee .col-badge { background: #1a0a0a; color: var(--red); }
+
+    .card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px;
+      margin-bottom: 8px; cursor: pointer; transition: border-color .15s, transform .1s;
+    }
+    .card:hover { border-color: var(--border2); transform: translateY(-1px); }
+    .card-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .card-handle { font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+    .card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+    .tag { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 99px; }
+    .tag-ig { background: #1a0a2e; color: #c084fc; border: 1px solid #3d1a6e; }
+    .tag-tt { background: var(--red-dim); color: var(--red); border: 1px solid #4a1515; }
+    .tag-tw { background: var(--blue-dim); color: var(--blue); border: 1px solid #0f2a50; }
+    .tag-autre { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+    .tag-niche { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+    .tag-followers { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+    .card-note { font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); padding-top: 6px; margin-top: 6px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-date { font-size: 10px; color: var(--text3); margin-top: 4px; }
+    .empty-col { text-align: center; color: var(--text3); font-size: 12px; padding: 2rem 0; border: 1px dashed var(--border); border-radius: var(--radius); }
+
+    /* Modal */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.65); z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 14px; padding: 1.5rem; width: 420px;
+      max-width: 95vw; max-height: 90vh; overflow-y: auto;
+      position: relative;
+    }
+    .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+    .field { margin-bottom: 14px; }
+    .field label { font-size: 11px; color: var(--text3); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+    .field input, .field select, .field textarea {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); padding: 8px 10px;
+      font-size: 13px; font-family: inherit; outline: none; transition: border-color .15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--purple-mid); }
+    .field textarea { height: 80px; resize: vertical; }
+    .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; gap: 8px; }
+    .modal-close-btn {
+      position: absolute; top: 14px; right: 14px;
+      background: none; border: none; color: var(--text3);
+      cursor: pointer; font-size: 18px; line-height: 1; padding: 2px;
+    }
+    .modal-close-btn:hover { color: var(--text); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: var(--radius); padding: 10px 16px;
+      font-size: 13px; color: var(--text); z-index: 999;
+      transform: translateY(80px); opacity: 0; transition: all .25s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: #1a4a2a; color: var(--green); }
+    .toast.error { border-color: #4a1515; color: var(--red); }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Table view */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--bg3); color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg3); }
+    tr { cursor: pointer; }
+
+    /* Status badge */
+    .status-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+    .status-contactee { background: var(--blue-dim); color: var(--blue); }
+    .status-interesse { background: var(--amber-dim); color: var(--amber); }
+    .status-discussion { background: var(--purple-dim); color: var(--purple); }
+    .status-signee { background: var(--green-dim); color: var(--green); }
+    .status-refusee { background: var(--red-dim); color: var(--red); }
+
+    .view-toggle { display: flex; gap: 4px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; }
+    .view-btn { padding: 5px 10px; border-radius: 4px; border: none; background: none; color: var(--text2); cursor: pointer; font-size: 13px; font-family: inherit; transition: all .15s; }
+    .view-btn.active { background: var(--bg3); color: var(--text); }
+
+    .ig-link { color: var(--purple); text-decoration: none; font-size: 12px; }
+    .ig-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">✦</div>
+    <div>
+      <div class="logo-text">OFM CRM</div>
+      <div class="logo-sub">Outreach Manager</div>
+    </div>
+  </div>
+  <button class="nav-item active" onclick="showView('kanban')">
+    <span class="nav-icon">⬛</span> Kanban
+  </button>
+  <button class="nav-item" onclick="showView('table')">
+    <span class="nav-icon">☰</span> Tableau
+  </button>
+  <button class="nav-item" onclick="showView('settings')">
+    <span class="nav-icon">⚙</span> Paramètres
+  </button>
+  <div style="flex:1"></div>
+  <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--border); margin-top: 1rem;">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Google Sheet</div>
+    <a id="sheet-link-side" href="#" target="_blank" style="font-size:11px;color:var(--purple);text-decoration:none;word-break:break-all">Non configuré</a>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Sync bar -->
+  <div class="sync-bar" id="sync-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span class="sync-text" id="sync-text">Google Sheets non configuré — voir Paramètres</span>
+    <button class="btn btn-sm" onclick="syncFromSheet()" id="sync-btn">↻ Sync</button>
+    <a id="sheet-link" href="#" target="_blank" class="sync-link" style="display:none">Ouvrir le Sheet ↗</a>
+  </div>
+
+  <!-- KANBAN VIEW -->
+  <div id="view-kanban" class="view active">
+    <div class="topbar">
+      <h1 class="page-title">Prospects</h1>
+      <div class="topbar-actions">
+        <div class="search-wrap">
+          <span class="s-icon">🔍</span>
+          <input type="text" id="search" placeholder="Rechercher…" oninput="renderAll()">
+        </div>
+        <button class="btn btn-primary" onclick="openAdd()">+ Ajouter</button>
+      </div>
+    </div>
+    <div class="stats-grid" id="stats"></div>
+    <div class="kanban" id="kanban"></div>
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div id="view-table" class="view">
+    <div class="topbar">
+      <h1 class="page-title">Tableau</h1>
+      <div class="topbar-actions">
+        <div class="search-wrap">
+          <span class="s-icon">🔍</span>
+          <input type="text" id="search2" placeholder="Rechercher…" oninput="renderAll()">
+        </div>
+        <button class="btn btn-primary" onclick="openAdd()">+ Ajouter</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th><th>Handle</th><th>Plateforme</th><th>Abonnés</th><th>Niche</th><th>Statut</th><th>Contact</th><th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SETTINGS VIEW -->
+  <div id="view-settings" class="view">
+    <div class="topbar"><h1 class="page-title">Paramètres</h1></div>
+    <div class="config-panel">
+      <h3>🔗 Connexion Google Sheets</h3>
+      <div class="config-note" style="margin-bottom:1rem">
+        Pour connecter ton Google Sheet, tu as besoin de l'<strong>ID du sheet</strong> et d'une <strong>clé API Google</strong>.<br><br>
+        <strong>Étape 1 — Trouve l'ID du sheet :</strong> c'est la partie de l'URL entre <code>/d/</code> et <code>/edit</code>.<br>
+        Ex : <code>https://docs.google.com/spreadsheets/d/<strong>TON_ID_ICI</strong>/edit</code><br><br>
+        <strong>Étape 2 — Crée une clé API :</strong> va sur <a href="https://console.cloud.google.com/apis/credentials" target="_blank">console.cloud.google.com</a> → Identifiants → Créer une clé API → puis active "Google Sheets API".<br><br>
+        <strong>Étape 3 — Rends ton Sheet public en lecture</strong> : Partage → "Toute personne avec le lien peut voir".<br><br>
+        <strong>Format du Sheet attendu :</strong> colonnes dans l'ordre — <code>Nom, Handle, Plateforme, Abonnés, Niche, Méthode, Statut, Date, Notes</code>
+      </div>
+      <div class="config-row">
+        <div class="config-field">
+          <label>ID du Google Sheet</label>
+          <input type="text" id="cfg-sheet-id" placeholder="15PbaEa30leMBSZv…" oninput="saveConfig()">
+        </div>
+      </div>
+      <div class="config-row">
+        <div class="config-field">
+          <label>Clé API Google</label>
+          <input type="text" id="cfg-api-key" placeholder="AIzaSy…" oninput="saveConfig()">
+        </div>
+        <div class="config-field" style="max-width:180px">
+          <label>Nom de l'onglet</label>
+          <input type="text" id="cfg-sheet-name" placeholder="Feuille1" oninput="saveConfig()">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="syncFromSheet()">↻ Synchroniser maintenant</button>
+        <button class="btn" onclick="testConnection()">Tester la connexion</button>
+      </div>
+    </div>
+
+    <div class="config-panel">
+      <h3>💾 Données locales</h3>
+      <div class="config-note" style="margin-bottom:1rem">
+        Les données sont sauvegardées dans ton navigateur. Tu peux aussi exporter en CSV.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="exportCSV()">⬇ Exporter CSV</button>
+        <button class="btn btn-danger" onclick="clearData()">🗑 Réinitialiser les données</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ADD/EDIT Modal -->
+<div class="overlay" id="modal-add">
+  <div class="modal">
+    <button class="modal-close-btn" onclick="closeModal('modal-add')">✕</button>
+    <div class="modal-title" id="modal-add-title">Nouvelle modèle</div>
+    <input type="hidden" id="f-id">
+    <div class="field"><label>Nom / Pseudo</label><input type="text" id="f-name" placeholder="ex: Léa Martin"></div>
+    <div class="field"><label>Handle / @pseudo</label><input type="text" id="f-handle" placeholder="@pseudo"></div>
+    <div class="field"><label>Plateforme</label>
+      <select id="f-platform">
+        <option value="instagram">Instagram</option>
+        <option value="tiktok">TikTok</option>
+        <option value="twitter">Twitter/X</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="field"><label>Nb abonnés</label><input type="text" id="f-followers" placeholder="ex: 45k"></div>
+    <div class="field"><label>Niche</label><input type="text" id="f-niche" placeholder="ex: fitness, lifestyle…"></div>
+    <div class="field"><label>Méthode de contact</label>
+      <select id="f-method">
+        <option>DM Instagram</option><option>DM TikTok</option>
+        <option>Email</option><option>DM Twitter</option><option>Autre</option>
+      </select>
+    </div>
+    <div class="field"><label>Statut</label>
+      <select id="f-status">
+        <option value="contactee">Contactée</option>
+        <option value="interesse">Intéressée</option>
+        <option value="discussion">En discussion</option>
+        <option value="signee">Signée ✓</option>
+        <option value="refusee">Refusée</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-note" placeholder="Impression, détails…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" id="btn-delete" onclick="deleteModel()" style="display:none">🗑 Supprimer</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn" onclick="closeModal('modal-add')">Annuler</button>
+        <button class="btn btn-primary" onclick="saveModel()">✓ Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────
+const STATUSES = [
+  { id:'contactee', label:'Contactée' },
+  { id:'interesse', label:'Intéressée' },
+  { id:'discussion', label:'En discussion' },
+  { id:'signee', label:'Signée ✓' },
+  { id:'refusee', label:'Refusée' }
+];
+const PLATFORM_LABEL = { instagram:'Instagram', tiktok:'TikTok', twitter:'Twitter/X', autre:'Autre' };
+
+let models = [];
+let nextId = 1;
+let config = { sheetId:'', apiKey:'', sheetName:'Feuille1' };
+
+// ─── Init ─────────────────────────────────────────────────────────
+function init() {
+  const saved = localStorage.getItem('ofm_models');
+  const savedCfg = localStorage.getItem('ofm_config');
+  if (savedCfg) config = { ...config, ...JSON.parse(savedCfg) };
+  if (saved) {
+    models = JSON.parse(saved);
+    nextId = models.length ? Math.max(...models.map(m => m.id)) + 1 : 1;
+  } else {
+    models = [
+      {id:1,name:'Léa Dubois',handle:'@lea.fit',platform:'instagram',followers:'82k',niche:'Fitness',method:'DM Instagram',status:'interesse',date:'2025-06-10',note:'Très réactive, curieuse du modèle de rémunération'},
+      {id:2,name:'Camille V.',handle:'@camv_life',platform:'tiktok',followers:'210k',niche:'Lifestyle',method:'DM TikTok',status:'discussion',date:'2025-06-08',note:'Appel prévu jeudi'},
+      {id:3,name:'Sophie R.',handle:'@sophie.roux',platform:'instagram',followers:'34k',niche:'Bien-être',method:'DM Instagram',status:'contactee',date:'2025-06-14',note:'Pas encore de réponse'},
+      {id:4,name:'Inès M.',handle:'@ines_mode',platform:'twitter',followers:'18k',niche:'Mode',method:'DM Twitter',status:'signee',date:'2025-06-02',note:'Contrat signé !'},
+      {id:5,name:'Julie T.',handle:'@juliet_vlog',platform:'tiktok',followers:'125k',niche:'Vlogs',method:'DM TikTok',status:'refusee',date:'2025-06-05',note:'Déjà avec un autre manager'},
+      {id:6,name:'Emma B.',handle:'@emmab_art',platform:'instagram',followers:'55k',niche:'Art/Photo',method:'DM Instagram',status:'contactee',date:'2025-06-15',note:'Profil très qualitatif'},
+    ];
+    nextId = 7;
+  }
+  loadConfig();
+  renderAll();
+  updateSyncBar();
+}
+
+function save() { localStorage.setItem('ofm_models', JSON.stringify(models)); }
+function saveConfig() {
+  config.sheetId = document.getElementById('cfg-sheet-id').value.trim();
+  config.apiKey = document.getElementById('cfg-api-key').value.trim();
+  config.sheetName = document.getElementById('cfg-sheet-name').value.trim() || 'Feuille1';
+  localStorage.setItem('ofm_config', JSON.stringify(config));
+  updateSyncBar();
+}
+function loadConfig() {
+  document.getElementById('cfg-sheet-id').value = config.sheetId || '';
+  document.getElementById('cfg-api-key').value = config.apiKey || '';
+  document.getElementById('cfg-sheet-name').value = config.sheetName || 'Feuille1';
+}
+
+// ─── Sync bar ─────────────────────────────────────────────────────
+function updateSyncBar(state, msg) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  const link = document.getElementById('sheet-link');
+  const linkSide = document.getElementById('sheet-link-side');
+  dot.className = 'sync-dot';
+  if (!config.sheetId || !config.apiKey) {
+    txt.textContent = 'Google Sheets non configuré — voir Paramètres';
+    link.style.display = 'none';
+    linkSide.textContent = 'Non configuré'; linkSide.href = '#';
+    return;
+  }
+  const url = `https://docs.google.com/spreadsheets/d/${config.sheetId}/edit`;
+  link.href = url; link.style.display = '';
+  linkSide.textContent = 'Ouvrir le Sheet ↗'; linkSide.href = url;
+  if (state === 'loading') { dot.classList.add('loading'); txt.textContent = msg || 'Synchronisation…'; }
+  else if (state === 'ok') { dot.classList.add('ok'); txt.textContent = msg || 'Synchronisé avec Google Sheets'; }
+  else if (state === 'error') { dot.classList.add('error'); txt.textContent = msg || 'Erreur de connexion'; }
+  else { dot.classList.add('ok'); txt.textContent = 'Sheet configuré — prêt à synchroniser'; }
+}
+
+// ─── Google Sheets sync ───────────────────────────────────────────
+async function syncFromSheet() {
+  if (!config.sheetId || !config.apiKey) {
+    showView('settings');
+    toast('Configure d\'abord le Sheet dans Paramètres', 'error');
+    return;
+  }
+  updateSyncBar('loading', 'Synchronisation en cours…');
+  try {
+    const range = encodeURIComponent(`${config.sheetName}!A2:I1000`);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/${range}?key=${config.apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
+    const data = await res.json();
+    const rows = data.values || [];
+    if (rows.length === 0) { updateSyncBar('ok', 'Sheet vide — aucune donnée importée'); return; }
+    const imported = rows.map((r, i) => ({
+      id: nextId + i,
+      name: r[0] || '',
+      handle: r[1] || '',
+      platform: (r[2] || 'instagram').toLowerCase(),
+      followers: r[3] || '',
+      niche: r[4] || '',
+      method: r[5] || 'DM Instagram',
+      status: r[6] || 'contactee',
+      date: r[7] || new Date().toISOString().split('T')[0],
+      note: r[8] || ''
+    })).filter(m => m.name);
+    models = imported;
+    nextId = models.length ? Math.max(...models.map(m => m.id)) + 1 : 1;
+    save();
+    renderAll();
+    updateSyncBar('ok', `${imported.length} modèles importées depuis Google Sheets`);
+    toast(`✓ ${imported.length} modèles synchronisées`, 'success');
+  } catch(e) {
+    updateSyncBar('error', 'Erreur : ' + e.message);
+    toast('Erreur de sync : ' + e.message, 'error');
+  }
+}
+
+async function testConnection() {
+  if (!config.sheetId || !config.apiKey) { toast('Remplis l\'ID et la clé API d\'abord', 'error'); return; }
+  updateSyncBar('loading', 'Test de connexion…');
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?key=${config.apiKey}&fields=properties.title`;
+    const res = await fetch(url);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
+    const data = await res.json();
+    updateSyncBar('ok', `Connecté : "${data.properties?.title || 'Sheet'}"`);
+    toast('✓ Connexion réussie !', 'success');
+  } catch(e) {
+    updateSyncBar('error', 'Erreur : ' + e.message);
+    toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────
+function getFiltered() {
+  const q1 = (document.getElementById('search')?.value || '').toLowerCase();
+  const q2 = (document.getElementById('search2')?.value || '').toLowerCase();
+  const q = q1 || q2;
+  if (!q) return models;
+  return models.filter(m =>
+    m.name.toLowerCase().includes(q) ||
+    m.handle.toLowerCase().includes(q) ||
+    (m.niche || '').toLowerCase().includes(q) ||
+    (m.note || '').toLowerCase().includes(q)
+  );
+}
+
+function renderAll() { renderStats(); renderKanban(); renderTable(); }
+
+function renderStats() {
+  const total = models.length;
+  const signees = models.filter(m => m.status === 'signee').length;
+  const discussion = models.filter(m => m.status === 'discussion').length;
+  const taux = total ? Math.round(signees / total * 100) : 0;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card stat-blue"><div class="stat-label">Total prospects</div><div class="stat-val">${total}</div><div class="stat-sub">modèles suivies</div></div>
+    <div class="stat-card stat-amber"><div class="stat-label">En discussion</div><div class="stat-val">${discussion}</div><div class="stat-sub">actives</div></div>
+    <div class="stat-card stat-green"><div class="stat-label">Signées</div><div class="stat-val">${signees}</div><div class="stat-sub">contrats conclus</div></div>
+    <div class="stat-card stat-purple"><div class="stat-label">Conversion</div><div class="stat-val">${taux}%</div><div class="stat-sub">contacts → signées</div></div>
+  `;
+}
+
+function platformTag(p) {
+  const cls = { instagram:'tag-ig', tiktok:'tag-tt', twitter:'tag-tw' };
+  return `<span class="tag ${cls[p]||'tag-autre'}">${PLATFORM_LABEL[p]||p}</span>`;
+}
+
+function renderKanban() {
+  const filtered = getFiltered();
+  document.getElementById('kanban').innerHTML = STATUSES.map(s => {
+    const cards = filtered.filter(m => m.status === s.id);
+    return `<div class="col-${s.id}">
+      <div class="col-head">${s.label}<span class="col-badge">${cards.length}</span></div>
+      ${cards.length ? cards.map(cardHTML).join('') : '<div class="empty-col">Aucune modèle</div>'}
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.card').forEach(el => {
+    el.addEventListener('click', () => openEdit(+el.dataset.id));
+  });
+}
+
+function cardHTML(m) {
+  const handle = m.handle.replace('@','');
+  const igUrl = m.platform === 'instagram' ? `https://instagram.com/${handle}` :
+                m.platform === 'tiktok' ? `https://tiktok.com/@${handle}` :
+                m.platform === 'twitter' ? `https://twitter.com/${handle}` : '#';
+  return `<div class="card" data-id="${m.id}">
+    <div class="card-name">${m.name}</div>
+    <div class="card-handle">
+      <a class="ig-link" href="${igUrl}" target="_blank" onclick="event.stopPropagation()">${m.handle} ↗</a>
+    </div>
+    <div class="card-tags">
+      ${platformTag(m.platform)}
+      ${m.followers ? `<span class="tag tag-followers">👥 ${m.followers}</span>` : ''}
+      ${m.niche ? `<span class="tag tag-niche">${m.niche}</span>` : ''}
+    </div>
+    ${m.note ? `<div class="card-note">${m.note}</div>` : ''}
+    <div class="card-date">${m.date || ''}</div>
+  </div>`;
+}
+
+function renderTable() {
+  const filtered = getFiltered();
+  document.getElementById('table-body').innerHTML = filtered.map(m => {
+    const handle = m.handle.replace('@','');
+    const url = m.platform === 'instagram' ? `https://instagram.com/${handle}` :
+                m.platform === 'tiktok' ? `https://tiktok.com/@${handle}` :
+                m.platform === 'twitter' ? `https://twitter.com/${handle}` : '#';
+    return `<tr onclick="openEdit(${m.id})">
+      <td style="font-weight:500">${m.name}</td>
+      <td><a class="ig-link" href="${url}" target="_blank" onclick="event.stopPropagation()">${m.handle}</a></td>
+      <td>${platformTag(m.platform)}</td>
+      <td>${m.followers || '—'}</td>
+      <td>${m.niche || '—'}</td>
+      <td><span class="status-badge status-${m.status}">${STATUSES.find(s=>s.id===m.status)?.label||m.status}</span></td>
+      <td style="color:var(--text2)">${m.method || '—'}</td>
+      <td style="color:var(--text3);font-size:12px">${m.date || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── CRUD ─────────────────────────────────────────────────────────
+function openAdd() {
+  document.getElementById('modal-add-title').textContent = 'Nouvelle modèle';
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-handle').value = '';
+  document.getElementById('f-platform').value = 'instagram';
+  document.getElementById('f-followers').value = '';
+  document.getElementById('f-niche').value = '';
+  document.getElementById('f-method').value = 'DM Instagram';
+  document.getElementById('f-status').value = 'contactee';
+  document.getElementById('f-note').value = '';
+  document.getElementById('btn-delete').style.display = 'none';
+  document.getElementById('modal-add').classList.add('open');
+  document.getElementById('f-name').focus();
+}
+
+function openEdit(id) {
+  const m = models.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('modal-add-title').textContent = 'Modifier la modèle';
+  document.getElementById('f-id').value = m.id;
+  document.getElementById('f-name').value = m.name;
+  document.getElementById('f-handle').value = m.handle;
+  document.getElementById('f-platform').value = m.platform;
+  document.getElementById('f-followers').value = m.followers || '';
+  document.getElementById('f-niche').value = m.niche || '';
+  document.getElementById('f-method').value = m.method || 'DM Instagram';
+  document.getElementById('f-status').value = m.status;
+  document.getElementById('f-note').value = m.note || '';
+  document.getElementById('btn-delete').style.display = '';
+  document.getElementById('modal-add').classList.add('open');
+}
+
+function saveModel() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { document.getElementById('f-name').focus(); return; }
+  const id = document.getElementById('f-id').value;
+  const obj = {
+    name,
+    handle: document.getElementById('f-handle').value.trim(),
+    platform: document.getElementById('f-platform').value,
+    followers: document.getElementById('f-followers').value.trim(),
+    niche: document.getElementById('f-niche').value.trim(),
+    method: document.getElementById('f-method').value,
+    status: document.getElementById('f-status').value,
+    note: document.getElementById('f-note').value.trim(),
+    date: new Date().toISOString().split('T')[0]
+  };
+  if (id) {
+    const idx = models.findIndex(x => x.id === +id);
+    if (idx > -1) { models[idx] = { ...models[idx], ...obj }; }
+  } else {
+    models.push({ id: nextId++, ...obj });
+  }
+  save(); renderAll();
+  closeModal('modal-add');
+  toast('✓ Enregistré', 'success');
+}
+
+function deleteModel() {
+  const id = +document.getElementById('f-id').value;
+  if (!id) return;
+  if (!confirm('Supprimer cette modèle ?')) return;
+  models = models.filter(x => x.id !== id);
+  save(); renderAll();
+  closeModal('modal-add');
+  toast('Supprimée', 'error');
+}
+
+// ─── Navigation ───────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  const map = { kanban:0, table:1, settings:2 };
+  document.querySelectorAll('.nav-item')[map[name]]?.classList.add('active');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Fermer modal en cliquant dehors
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ─── Export CSV ───────────────────────────────────────────────────
+function exportCSV() {
+  const headers = ['Nom','Handle','Plateforme','Abonnés','Niche','Méthode','Statut','Date','Notes'];
+  const rows = models.map(m => [m.name,m.handle,m.platform,m.followers||'',m.niche||'',m.method||'',m.status,m.date||'',m.note||''].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'ofm_crm_export.csv'; a.click();
+  toast('✓ CSV exporté', 'success');
+}
+
+function clearData() {
+  if (!confirm('Supprimer toutes les données locales ? (irréversible)')) return;
+  localStorage.removeItem('ofm_models');
+  models = []; nextId = 1; save(); renderAll();
+  toast('Données réinitialisées', 'error');
+}
+
+// ─── Toast ────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>
